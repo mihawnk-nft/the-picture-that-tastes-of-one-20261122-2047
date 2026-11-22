@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
-"""the-picture-that-tastes-of-one-20261122-2047: write one picture of food
-to /output/entry.png.
+"""Entry point for the-picture-that-tastes-of-one-20261122-2047.
 
-The image is a 1024x1024 PNG drawn at build time (see render.py in the
-build directory): a stack of golden pancakes drowned in glossy maple
-syrup with a melting pat of butter, on a cream plate over a warm dark
-table -- one ingredient, maple syrup, you can taste at one look. Every
-shape is drawn in code. This program only copies the PNG the repository
-holds, so it needs no network and writes identical bytes on every run.
+Copies the bundled entry.png to the output directory (``/output`` by
+default, or ``$MAKEFUN_OUTPUT_DIR`` when set). Standard library only.
 """
 import os
-import shutil
+import sys
+from pathlib import Path
 
-MAX_BYTES = 1048576
+HERE = Path(__file__).resolve().parent
+SOURCE = HERE / "entry.png"
+MAX_BYTES = 1_048_576
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 
-def main():
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(out_dir, exist_ok=True)
-    here = os.path.dirname(os.path.abspath(__file__))
-    src = os.path.join(here, "entry.png")
-    dst = os.path.join(out_dir, "entry.png")
-    shutil.copyfile(src, dst)
-    with open(dst, "rb") as fh:
-        magic = fh.read(8)
-    if magic != b"\x89PNG\r\n\x1a\n":
-        os.remove(dst)
-        raise SystemExit("entry.png is not a PNG")
-    size = os.path.getsize(dst)
-    if size > MAX_BYTES:
-        os.remove(dst)
-        raise SystemExit(f"entry.png is {size} bytes, over the 1 MiB cap")
-    print(f"wrote {dst}: {size} bytes")
+def main() -> int:
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    if not SOURCE.is_file():
+        print(f"error: {SOURCE} not found", file=sys.stderr)
+        return 1
+    data = SOURCE.read_bytes()
+    if data[:8] != PNG_MAGIC:
+        print("error: entry.png is not a valid PNG (bad magic)", file=sys.stderr)
+        return 1
+    if len(data) > MAX_BYTES:
+        print(f"error: entry.png is {len(data)} bytes, over the 1 MiB cap",
+              file=sys.stderr)
+        return 1
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target = out_dir / "entry.png"
+    target.write_bytes(data)
+    print(f"wrote {target}: {len(data)} bytes")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

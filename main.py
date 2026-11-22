@@ -30,7 +30,13 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / "entry.png"
     target.write_bytes(data)
-    print(f"wrote {target}: {len(data)} bytes")
+    # Verify the copy landed intact before reporting success.
+    written = target.read_bytes()
+    if written != data:
+        print(f"error: {target} differs from source after write",
+              file=sys.stderr)
+        return 1
+    print(f"wrote {target}: {len(written)} bytes (verified)")
     return 0
 
 
